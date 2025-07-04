@@ -13,19 +13,21 @@ import { Label } from '@/components/ui/label';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'Posts Create',
-    href: '/posts/create',
+    title: 'Posts Edit',
+    href: '/posts/edit',
   },
 ];
 
+const props = defineProps<{ post: any }>();
+
 const form = useForm({
-  title: '',
-  content: '',
-  tags: [],
+  title: props.post.title,
+  content: props.post.content,
+  tags: props.post.tags.map((tag: any) => tag.name),
 });
 
 function submit() {
-  form.post(route('Posts/store'), {
+  form.post(route('Posts/update', { id: props.post.id }), {
     onSuccess: () => {
       form.reset();
       router.visit('/posts');
@@ -33,14 +35,13 @@ function submit() {
     preserveScroll: true,
   });
 }
-
 </script>
 <template>
   <Head title="Create Post" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-      <h2 class="text-2xl font-bold">Create your Post</h2>
+      <h2 class="text-2xl font-bold">Edit your Post</h2>
 
       <form @submit.prevent="submit">
         <div class="grid gap-2">

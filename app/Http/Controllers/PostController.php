@@ -6,6 +6,8 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\User;
+use App\Models\Tag;
+use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
@@ -14,8 +16,8 @@ class PostController extends Controller
      */
     public function index()
     {
-        $posts = Post::with("user", "tags")->latest()->get();
 
+        $posts = Post::with("user", "tags")->latest()->get();
         return Inertia::render('Posts/index', [
             'posts' => $posts,
         ]);
@@ -41,7 +43,21 @@ class PostController extends Controller
             'tags.*' => 'string|max:255',
         ]);
 
-        $post = Post::create($validated);
+        $post = new Post([
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+            // não passas user_id aqui
+        ]);
+
+        // Define user_id manualmente
+        $post->user_id = Auth::id();
+        $post->save();
+
+        foreach ($validated['tags'] as $tagName) {
+            $tag = Tag::firstOrCreate(['name' => $tagName]);
+            $post->tags()->attach($tag->id);
+        }
+
 
         return redirect()->route('Posts/index', $post);
     }
@@ -51,7 +67,9 @@ class PostController extends Controller
      */
     public function show(Post $post)
     {
-        //
+        return Inertia::render('Posts/show', [
+            'post' => $post->load('user', 'tags'),
+        ]);
     }
 
     /**
@@ -59,7 +77,9 @@ class PostController extends Controller
      */
     public function edit(Post $post)
     {
-        //
+        return Inertia::render('Posts/edit', [
+            'post' => $post->load('tags'),
+        ]);
     }
 
     /**
@@ -67,14 +87,36 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post)
     {
-        //
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'tags' => 'array',
+            'tags.*' => 'string|max:255',
+        ]);
+
+        $post->update([
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+        ]);
+
+        $post->tags()->detach();
+        foreach ($validated['tags'] as $tagName) {
+            $tag = Tag::firstOrCreate(['name' => $tagName]);
+            $post->tags()->attach($tag->id);
+        }
+
+
+        return redirect()->route('Posts/index', $post);
     }
+
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Post $post)
     {
-        //
+        $post->delete();
+
+        return redirect()->route('Posts/index');
     }
 }
